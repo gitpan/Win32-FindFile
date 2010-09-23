@@ -4,3 +4,11 @@ Revision history for Perl extension Win32::FindFile.
 	- original version; created by h2xs 1.23 with options
 		-A -b 5.8.8 -n Win32::FindFile
 
+0.02  Mon Sep 21 19:31:02 2010
+	- added function uchar, wchar 
+
+0.03  Mon Sep 23 10:25:30 2010
+	- some profiling and optimization
+
+0.04  Mon Sep 23 19:25:54 2010
+	- added GetCurrectDirector 

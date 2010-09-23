@@ -1,7 +1,7 @@
 use Config;
 use Data::Dumper;
-unless ( $] >= 5.008000 ){
-	print STDERR "Perl 5.8.0 required would not build\n";
+unless ( $] >= 5.008001 ){
+	print STDERR "Perl 5.8.1 required would not build\n";
 	exit;
 }
 

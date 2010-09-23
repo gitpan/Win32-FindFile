@@ -1,6 +1,4 @@
 package Win32::FindFile;
-
-use 5.008008;
 use strict;
 use warnings;
 
@@ -15,15 +13,15 @@ our @ISA = qw(Exporter);
 # This allows declaration	use Win32::FindFile ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(FindFile) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw(FindFile GetCurrentDirectory Output wchar uchar) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
-	FindFile	
+	FindFile 	
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.04';
 
 require XSLoader;
 XSLoader::load('Win32::FindFile', $VERSION);
@@ -53,13 +51,32 @@ Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW 
 	  utf8::decode( $_ );
 	  print $_, "\n";
   };
+  print "Current directory is ", GetCurrentDirectory(), "\n";
+
+# Using with Win32API::File
+
+  use Win32::FindFile qw(wchar GetCurrentDirectory);
+  use Win32API::File qw(MoveFileW);
+  use Win32::API ;
+
+  my %rename ( ... )
+  for (FindFile( '*' )){
+	next unless $rename{$_}:
+	MoveFileW( wchar( $_ ), wchar( $rename{$_} ) or die "$^E";
+
+  }
+
+
 
 =head1 DESCRIPTION
-	Win32::FindFile are simple wrapper around win32 core function FindFileFirst/FindFileNext
+
+	Win32::FindFile are simple wrapper around win32 functions FindFileFirst/FindFileNext
 
 =head2 EXPORT
 
 @content = FindFile( $Pattern )
+
+$directory = GetCurrentDirectory();
 
 =head1 SEE ALSO
 
