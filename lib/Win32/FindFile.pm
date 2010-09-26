@@ -21,7 +21,7 @@ our @EXPORT = qw(
 	FindFile 	
 );
 
-our $VERSION = '0.04';
+our $VERSION = '0.06';
 
 require XSLoader;
 XSLoader::load('Win32::FindFile', $VERSION);

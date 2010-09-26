@@ -4,7 +4,6 @@
 
 #include "ppport.h"
 #include <Windows.h>//#include <Winbase.h>
-#include <strings.h>
 
 void convert_towchar( WCHAR * buf,  U8 *utf8,  STRLEN chars){
     UV value;
@@ -151,6 +150,69 @@ bool convert_toutf8_02 ( U8 *utf8, STRLEN bufsize, WCHAR * wstr ){
     while( 1 );
 };
 
+SV *mortal_wchar(SV *utf8){
+
+    SV *WCHAR_SV;
+    STRLEN chars;
+    STRLEN bytes;
+    U8 *str_u8;
+    WCHAR *wbuff;
+    // Get pointer && data length
+    str_u8 = SvPV( utf8, bytes );
+    chars = utf8_length( str_u8, str_u8 + bytes );
+    WCHAR_SV = newSVpvn( "", 0);
+    sv_2mortal( WCHAR_SV );
+    if (chars >= MAX_PATH ){
+	 SvGROW( WCHAR_SV, sizeof( WCHAR ) * ( chars  + 1 + 4));
+    }
+    else {
+	SvGROW(  WCHAR_SV, sizeof( WCHAR ) * ( chars  + 1 ));
+    }
+    // It's no right ??? this is no support for surrogate so + zero byte at the end
+    SvCUR_set( WCHAR_SV,  sizeof( WCHAR ) * ( chars  + 1));
+    wbuff = ( WCHAR *) SvPVX( WCHAR_SV );
+    convert_towchar_01( wbuff , str_u8, chars);
+    return WCHAR_SV;
+}
+
+SV *normalize_path(SV *wpath ){
+    STRLEN chars;
+    STRLEN bytes;
+    WCHAR *buffer;
+    buffer = ( WCHAR * )SvPV( wpath, bytes );
+    chars = (bytes >> 1) -1 ;
+    if ( ( bytes & 1 ) || (buffer[ chars ])){
+	PerlIO_stdoutf( "Not valid file come" );	
+	chars = wcslen( buffer );
+    };
+    if (chars < MAX_PATH ){
+	return wpath;
+    }
+    else {
+	STRLEN k;
+	if ( buffer[0] == '\\' && buffer[1] == '\\' && buffer[2] == '?' && buffer[3] == '\\' ){
+	    return wpath;
+	};
+	// We need replace all '/' and make prefix \\?\
+	//
+	
+	if (SvLEN(wpath) < (chars + 5) * sizeof(WCHAR) )
+	    SvGROW( wpath, (chars + 5) * sizeof(WCHAR) );
+	Move(  buffer, buffer +4 , chars +1, WCHAR);
+	buffer[0] = '\\';
+	buffer[1] = '\\';
+	buffer[2] = '?';
+	buffer[3] = '\\';
+	for (k = 0; k < chars; ++k ){
+	   if ( buffer[ k + 4 ] == '/' )
+	       buffer[ k + 4 ] = '\\';
+
+	};
+	SvCUR_set(wpath, sizeof(WCHAR) * (chars + 5));
+	return wpath;
+    };
+}
+
 
 MODULE = Win32::FindFile		PACKAGE = Win32::FindFile		
 
@@ -163,7 +225,6 @@ uchar2( SV * wstr_sv )
     STRLEN bytes;
     U8 *str_u8;
     WCHAR *wstr_ptr;
-    WCHAR *wbuff;
     STRLEN bufsize;
     PPCODE:
     wstr_ptr = ( WCHAR *) SvPV( wstr_sv, bytes );
@@ -190,13 +251,9 @@ void
 uchar( SV * wstr_sv )
     PROTOTYPE: $;
     INIT:
-    SV *UTF8_SV;
     STRLEN chars;
     STRLEN bytes;
-    U8 *str_u8;
     WCHAR *wstr_ptr;
-    WCHAR *wbuff;
-    STRLEN bufsize;
     PPCODE:
     wstr_ptr = ( WCHAR *) SvPV( wstr_sv, bytes );
     chars = wcslen( wstr_ptr );
@@ -211,7 +268,6 @@ fromWCHAR( SV * wstr_sv )
     STRLEN bytes;
     U8 *str_u8;
     WCHAR *wstr_ptr;
-    WCHAR *wbuff;
     STRLEN bufsize;
     PPCODE:
     wstr_ptr = ( WCHAR *) SvPV( wstr_sv, bytes );
@@ -237,23 +293,8 @@ fromWCHAR( SV * wstr_sv )
 
 void
 wchar( SV * str )
-    PROTOTYPE: $;
-    INIT:
-    SV *WCHAR_SV;
-    STRLEN chars;
-    STRLEN bytes;
-    U8 *str_u8;
-    WCHAR *wbuff;
     PPCODE:
-    str_u8 = SvPV( str, bytes );
-    chars = utf8_length( str_u8, str_u8 + bytes );
-    WCHAR_SV = newSVpvn( "", 0);
-    sv_2mortal( WCHAR_SV );
-    SvGROW( WCHAR_SV, sizeof( WCHAR ) * ( chars  + 1));
-    SvCUR_set( WCHAR_SV,  sizeof( WCHAR ) * ( chars  + 1));
-    wbuff = ( WCHAR *) SvPVX( WCHAR_SV );
-    convert_towchar_01( wbuff , str_u8, chars);
-    XPUSHs( WCHAR_SV );
+    XPUSHs( mortal_wchar( str) );
 
 void
 toWCHAR( SV * str )
@@ -278,9 +319,13 @@ toWCHAR( SV * str )
 
 
 
+void 
+wfchar( SV * str)
+    PPCODE:
+    XPUSHs( normalize_path( mortal_wchar( str )));
 
 
-
+# /* File functions */
 
 void 
 FindFile(SV* dir)
@@ -327,9 +372,6 @@ GetCurrentDirectory()
     INIT:
     WCHAR  *wbuff;
     WCHAR  wbuff_stack[ MAX_PATH ];
-    U8  *dir_u8;
-    SV * WCHAR_SV;
-    STRLEN bytes;
     STRLEN chars;
     int path_size;
     PPCODE:

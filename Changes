@@ -11,4 +11,11 @@ Revision history for Perl extension Win32::FindFile.
 	- some profiling and optimization
 
 0.04  Mon Sep 23 19:25:54 2010
-	- added GetCurrectDirector 
+	- added GetCurrectDirectory
+
+0.05  Sun Sep 26 22:55:?? 2010
+	- wfchar function
+	
+0.06  Sun Sep 26 23:55:?? 2010
+	- added tests for wchar, uchar, wfchar
+
