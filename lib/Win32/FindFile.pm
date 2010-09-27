@@ -13,7 +13,31 @@ our @ISA = qw(Exporter);
 # This allows declaration	use Win32::FindFile ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(FindFile GetCurrentDirectory Output wchar uchar) ] );
+our %EXPORT_TAGS = ( 'all' => [ qw(
+	FindFile 
+	Output 
+	wchar 
+	uchar
+	wfchar
+
+	DeleteFile
+	MoveFile
+	CopyFile
+	RemoveDirectory
+	CreateDirectory
+
+	GetFullPathName
+	GetCurrentDirectory 
+	SetCurrentDirectory 
+
+	GetBinaryType
+	GetCompressedFileSize
+	GetFileAttributes
+	SetFileAttributes
+	GetLongPathName
+
+	AreFileApisANSI
+	) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -21,7 +45,7 @@ our @EXPORT = qw(
 	FindFile 	
 );
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 require XSLoader;
 XSLoader::load('Win32::FindFile', $VERSION);
@@ -74,13 +98,35 @@ Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW 
 
 =head2 EXPORT
 
+
 @content = FindFile( $Pattern )
 
-$directory = GetCurrentDirectory();
+
+	GetCurrentDirectory()
+	SetCurrentDirectory( folder ) or die "Can't chdir to folder";
+    GetFullPathName(file)
+
+    wchar
+    uchar
+    wfchar
+
+    AreFileApisANSI
+
+    DeleteFile
+	CopyFile($$;$)
+	MoveFile($$)
+    RemoveDirectory
+    CreateDirectory
+
+    GetBinaryType
+    GetCompressedFileSize
+    GetFileAttributes
+    SetFileAttributes
+	GetLongPathName(file)
 
 =head1 SEE ALSO
 
-L<Win32>, L<Win32API>(CopyFile, DeleteFile, MoveFile)
+L<Win32>, L<Win32API>
 
 =head1 AUTHOR
 

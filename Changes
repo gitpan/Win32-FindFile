@@ -3,6 +3,7 @@ Revision history for Perl extension Win32::FindFile.
 0.01  Mon Sep 20 17:18:42 2010
 	- original version; created by h2xs 1.23 with options
 		-A -b 5.8.8 -n Win32::FindFile
+	- Added function FindFile
 
 0.02  Mon Sep 21 19:31:02 2010
 	- added function uchar, wchar 
@@ -19,3 +20,23 @@ Revision history for Perl extension Win32::FindFile.
 0.06  Sun Sep 26 23:55:?? 2010
 	- added tests for wchar, uchar, wfchar
 
+0.07  Sun Sep 27 17:05 2010
+	- added wrappers around 
+
+	    DeleteFile
+	    MoveFile
+	    CopyFile
+	    RemoveDirectory
+	    CreateDirectory
+
+	    GetFullPathName
+	    GetCurrentDirectory
+	    SetCurrentDirectory
+
+	    GetBinaryType
+	    GetCompressedFileSize
+	    GetFileAttributes
+	    SetFileAttributes
+	    GetLongPathName
+
+	    AreFileApisANSI

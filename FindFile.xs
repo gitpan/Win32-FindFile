@@ -5,6 +5,14 @@
 #include "ppport.h"
 #include <Windows.h>//#include <Winbase.h>
 
+typedef WCHAR * WFile;
+typedef DWORD WINAPI (*GetLongPathName_t)(
+	   WCHAR* ,
+	   WCHAR* ,
+	   DWORD 
+	);
+
+
 void convert_towchar( WCHAR * buf,  U8 *utf8,  STRLEN chars){
     UV value;
     STRLEN offset;
@@ -213,6 +221,9 @@ SV *normalize_path(SV *wpath ){
     };
 }
 
+SV * WBool(bool obj){
+    return obj ? &PL_sv_yes : &PL_sv_no ;
+}
 
 MODULE = Win32::FindFile		PACKAGE = Win32::FindFile		
 
@@ -366,47 +377,168 @@ FindFile(SV* dir)
 	    FindClose( hFile );
 	}
 	
+
 void 
-GetCurrentDirectory()
-    PROTOTYPE: 
-    INIT:
-    WCHAR  *wbuff;
-    WCHAR  wbuff_stack[ MAX_PATH ];
-    STRLEN chars;
-    int path_size;
+AreFileApisANSI()
     PPCODE:
-	wbuff = wbuff_stack;
-	path_size = GetCurrentDirectoryW( MAX_PATH, wbuff);
-	
-	if ( MAX_PATH == path_size ){
-	    // Too small buffer;
-	    SV *tmp;
+	XPUSHs( WBool( AreFileApisANSI() ));
 
-	    STRLEN tmp_len;
-	    tmp_len = MAX_PATH;
-	    tmp = sv_newmortal();
-	    sv_setpvn( tmp, "", 0);
-	    do {
-		tmp_len *= 2;
-		SvGROW( tmp, tmp_len * sizeof( WCHAR ));
-	        path_size = GetCurrentDirectoryW( tmp_len, (WCHAR *) SvPVX( tmp ));
+
+
+void 
+DeleteFile(WFile file)
+    PPCODE:
+	XPUSHs( WBool(DeleteFileW( file )));
+
+
+void 
+GetBinaryType(WFile file)
+    PREINIT:
+    DWORD BinaryType;
+    PPCODE:
+    if ( GetBinaryTypeW( file, & BinaryType ) ){
+	mXPUSHi( BinaryType );	
+    }
+    else {
+	XPUSHs( &PL_sv_undef );
+    }
+
+void 
+GetCompressedFileSize(WFile file)
+    PREINIT:
+    DWORD FileSize1;
+    //DWORD FileSize2;
+    PPCODE:
+    if ( ( FileSize1 = GetCompressedFileSizeW( file, NULL )) != INVALID_FILE_SIZE ){
+        mXPUSHi( FileSize1 );
+    }
+    else {
+        XPUSHs( &PL_sv_undef );
+    }
+
+void
+GetFileAttributes( WFile file)
+    PREINIT:reFileApisANSI
+    DWORD FileAttributes;
+    PPCODE:
+    if ( ( FileAttributes = GetFileAttributesW( file )) != INVALID_FILE_ATTRIBUTES ){
+	mXPUSHi( FileAttributes );
+    }
+    else {
+	XPUSHs( &PL_sv_undef );
+    }
+
+void 
+RemoveDirectory( WFile file )
+    PPCODE:
+    XPUSHs(WBool( RemoveDirectoryW( file )));
+
+void 
+CreateDirectory( WFile file )
+    PPCODE:
+    XPUSHs(WBool( CreateDirectoryW( file, NULL )));
+
+void 
+SetCurrentDirectory( WFile file )
+    PPCODE:
+    XPUSHs(WBool( SetCurrentDirectoryW( file )));
+
+void
+SetFileAttributes( WFile file, int FileAttributes)
+    PPCODE:
+    XPUSHs( WBool( SetFileAttributesW( file, FileAttributes )));
+
+void MoveFile( WFile file1, WFile file2 )
+    PPCODE:
+    mXPUSHs( WBool( MoveFileW( file1, file2 )));
+
+
+void CopyFile( WFile file1, WFile file2, int FailIfExists )
+    PPCODE:
+    mXPUSHs( WBool( CopyFileW( file1, file2, FailIfExists )));
+
+
+
+void GetCurrentDirectory( WFile file )
+    PREINIT:
+    long length;
+    SV *buffer;
+    PPCODE:
+	length = GetCurrentDirectoryW( 0 , NULL);
+	if ( length != 0){
+	    buffer= sv_newmortal();
+	    sv_setpvn( buffer, "", 0);
+	    SvGROW( buffer, (sizeof( WCHAR) * length ));
+	    
+	    length = GetCurrentDirectoryW( SvLEN(buffer)/2, (WCHAR *)SvPV_nolen( buffer ));	    
+	    if ( length != 0){
+		XPUSHs( mortal_utf8( (WCHAR *)SvPVX(buffer), length ));
 	    }
-	    while( path_size == tmp_len && tmp_len <= 16 * MAX_PATH );
-	    wbuff = (WCHAR *) SvPVX( tmp );
-	    if ( path_size == tmp_len ){
-		croak( "Current path too large" );
+	    else {
+		XPUSHs( &PL_sv_undef );
 	    };
-
-	};
-	if ( 0 != path_size ){
-    	    chars = path_size;
-	    PerlIO_stdoutf( "=%d\n", chars );
-	    XPUSHs( mortal_utf8( wbuff, chars ));
-	}
-	else {
-	    croak( "GetCurrentDirectoryW failed\n" );
+	} else {
 	    XPUSHs( &PL_sv_undef );
 	}
+
+void
+GetFullPathName( WFile file )
+    PREINIT:
+    long length;
+    SV *buffer;
+    PPCODE:
+	length = GetFullPathNameW( file, 0 , NULL, NULL);
+	if ( length != 0){
+	    buffer= sv_newmortal();
+	    sv_setpvn( buffer, "", 0);
+	    SvGROW( buffer, (sizeof( WCHAR) * length ));
+	    
+	    length = GetFullPathNameW( file, SvLEN(buffer)/2, (WCHAR *)SvPV_nolen( buffer ), NULL);	    
+	    if ( length != 0){
+		XPUSHs( mortal_utf8( (WCHAR *)SvPVX(buffer), length ));
+	    }
+	    else {
+		XPUSHs( &PL_sv_undef );
+	    };
+	} else {
+	    XPUSHs( &PL_sv_undef );
+	}
+
+
+void GetLongPathName( WFile file )
+    PREINIT:
+    long length;
+    SV *buffer;
+    HMODULE Kernel;
+    GetLongPathName_t Func;
+    PPCODE:
+	Kernel= LoadLibrary( "Kernel32.dll" );
+	if ( Kernel == NULL )
+	    croak( "Unable load Kernel32.dll" );
+	Func = ( GetLongPathName_t )GetProcAddress( Kernel, "GetLongPathNameW" );
+	if ( Func == NULL ){
+	    FreeLibrary( Kernel );
+	    croak( "Unable get function GetLongPathNameW" );
+	};
+
+	length = Func( file, NULL, 0);
+	if ( length != 0){
+	    buffer= sv_newmortal();
+	    sv_setpvn( buffer, "", 0);
+	    SvGROW( buffer, (sizeof( WCHAR) * length ));
+	    
+	    length = Func( file, (WCHAR *)SvPV_nolen( buffer ), SvLEN(buffer)/2);	    
+	    if ( length != 0){
+		XPUSHs( mortal_utf8( (WCHAR *)SvPVX(buffer), length ));
+	    }
+	    else {
+		XPUSHs( &PL_sv_undef );
+	    };
+	} else {
+	    XPUSHs( &PL_sv_undef );
+	}
+	FreeLibrary( Kernel );
+
 
 PROTOTYPES: DISABLE;
 
