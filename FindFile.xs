@@ -6,7 +6,7 @@
 #include <Windows.h>//#include <Winbase.h>
 
 typedef WCHAR * WFile;
-typedef DWORD WINAPI (*GetLongPathName_t)(
+typedef DWORD (*GetLongPathName_t)(
 	   WCHAR* ,
 	   WCHAR* ,
 	   DWORD 
@@ -383,6 +383,15 @@ AreFileApisANSI()
     PPCODE:
 	XPUSHs( WBool( AreFileApisANSI() ));
 
+void
+SetFileApisToOEM()
+    PPCODE:
+    SetFileApisToOEM();
+
+void
+SetFileApisToANSI()
+    PPCODE:
+    SetFileApisToANSI();
 
 
 void 

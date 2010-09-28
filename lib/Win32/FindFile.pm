@@ -37,6 +37,8 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	GetLongPathName
 
 	AreFileApisANSI
+        SetFileApisToOEM
+        SetFileApisToANSI
 	) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -45,7 +47,7 @@ our @EXPORT = qw(
 	FindFile 	
 );
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 require XSLoader;
 XSLoader::load('Win32::FindFile', $VERSION);
@@ -102,8 +104,8 @@ Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW 
 @content = FindFile( $Pattern )
 
 
-	GetCurrentDirectory()
-	SetCurrentDirectory( folder ) or die "Can't chdir to folder";
+    GetCurrentDirectory()
+    SetCurrentDirectory( folder ) or die "Can't chdir to folder";
     GetFullPathName(file)
 
     wchar
@@ -111,10 +113,12 @@ Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW 
     wfchar
 
     AreFileApisANSI
+    SetFileApisToOEM
+    SetFileApisToANSI
 
     DeleteFile
-	CopyFile($$;$)
-	MoveFile($$)
+    CopyFile($$;$)
+    MoveFile($$)
     RemoveDirectory
     CreateDirectory
 
@@ -122,7 +126,7 @@ Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW 
     GetCompressedFileSize
     GetFileAttributes
     SetFileAttributes
-	GetLongPathName(file)
+    GetLongPathName(file)
 
 =head1 SEE ALSO
 

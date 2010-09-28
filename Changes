@@ -39,4 +39,8 @@ Revision history for Perl extension Win32::FindFile.
 	    SetFileAttributes
 	    GetLongPathName
 
+0.08  Mon Sep 28 06:40 
+	- added wrappers around
 	    AreFileApisANSI
+	    SetFileApisToOEM
+	    SetFileApisToANSI
