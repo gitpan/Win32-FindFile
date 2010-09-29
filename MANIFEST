@@ -4,6 +4,7 @@ Makefile.PL
 MANIFEST
 ppport.h
 README
+typemap
 t/01-use.t
 t/02-wchar.t
 lib/Win32/FindFile.pm

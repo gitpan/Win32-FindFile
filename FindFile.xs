@@ -12,11 +12,12 @@ typedef DWORD (*GetLongPathName_t)(
 	   DWORD 
 	);
 
-
+void nil(){
+    NULL;
+};
 void convert_towchar( WCHAR * buf,  U8 *utf8,  STRLEN chars){
     UV value;
     STRLEN offset;
-    
 
     do {
 	if ( *utf8 < 128 ){
@@ -225,7 +226,136 @@ SV * WBool(bool obj){
     return obj ? &PL_sv_yes : &PL_sv_no ;
 }
 
-MODULE = Win32::FindFile		PACKAGE = Win32::FindFile		
+
+typedef WIN32_FIND_DATAW pWFD; 
+
+
+bool
+wfd_is_w(pWFD *ptr){
+    return 1 && ( ptr->dwFileAttributes & ( FILE_ATTRIBUTE_READONLY && FILE_ATTRIBUTE_SYSTEM ));
+}
+
+SV *
+wfd_FileSize(pWFD *ptr){
+    SV *sv;
+    sv= sv_newmortal();
+    if (sizeof ( UV ) > sizeof (DWORD)){
+	sv_setuv( sv, (((UV)ptr->nFileSizeHigh) << 32 ) + ptr->nFileSizeLow);
+    }
+    else {
+	if ( ptr->nFileSizeHigh == 0 ){
+	    sv_setuv( sv, ptr->nFileSizeLow );
+	}
+	else {
+	    sv_setnv( sv, ptr->nFileSizeHigh * (  0x10000 * ((double) 0x10000 ) ));
+	}
+    }
+    return sv;
+}
+
+bool 
+wfd_is_entry(pWFD *ptr){
+    if ( ptr->cFileName[0] != '.' )
+	return TRUE;
+    if ( ptr->cFileName[1] != '.' )
+	return TRUE;
+    if ( ptr->cFileName[2] != 0   )
+	return TRUE;
+    return FALSE;
+}
+
+bool
+wfd_is_archive(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE && 1;
+}
+    
+bool
+wfd_is_compressed(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_COMPRESSED && 1;
+}
+    
+bool
+wfd_is_device(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_DEVICE && 1;
+}
+
+bool
+wfd_is_directory(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && 1;
+}
+
+bool
+wfd_is_dir(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && 1;
+}
+    
+bool
+wfd_is_encrypted(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED && 1;
+}
+    
+bool
+wfd_is_hidden(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_HIDDEN && 1;
+}
+
+bool
+wfd_is_normal(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_NORMAL && 1;
+}
+    
+bool
+wfd_is_not_indexed(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_NORMAL && 1;
+}
+    
+bool
+wfd_is_not_content_indexed(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_NOT_CONTENT_INDEXED && 1;
+}
+    
+bool
+wfd_is_offline(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_OFFLINE && 1;
+}
+    
+bool
+wfd_is_readonly(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_READONLY && 1;
+}
+
+bool
+wfd_is_reparse_point(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT && 1;
+}
+
+bool
+wfd_is_sparse(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE && 1;
+}
+
+bool
+wfd_is_system(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_SYSTEM && 1;
+}
+
+bool
+wfd_is_temporary(pWFD *ptr){
+    return ptr->dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY && 1;
+}
+
+SV *wfd_new(WIN32_FIND_DATAW *str){
+    SV *RET;
+    WIN32_FIND_DATAW *ptr;
+    Newx( ptr, 1, WIN32_FIND_DATAW);
+    Copy( str, ptr, 1, WIN32_FIND_DATAW );
+    RET = sv_newmortal();
+    sv_setref_pv( RET,  "Win32::FindFile::_WFD",(void *) ptr );
+    return RET;
+}
+
+
+MODULE=  Win32::FindFile		  PACKAGE = Win32::FindFile		
 
 void 
 uchar2( SV * wstr_sv )
@@ -339,40 +469,22 @@ wfchar( SV * str)
 # /* File functions */
 
 void 
-FindFile(SV* dir)
+FindFile(WFile dir)
     PROTOTYPE: $
     INIT:
     WIN32_FIND_DATAW data;
     HANDLE hFile;
-    WCHAR * wbuff;
-    U8  BIG_UTF8[ MAX_PATH * 3 ];
-    U8  *dir_u8;
-    SV * WCHAR_SV;
-    STRLEN bytes;
-    STRLEN chars;
     PPCODE:
-	dir_u8 = SvPV( dir, bytes);
-	chars = utf8_length( dir_u8, dir_u8 + bytes );
-
-
-	WCHAR_SV = newSVpvn( "", 0);
-	sv_2mortal( WCHAR_SV );
-	SvGROW( WCHAR_SV, sizeof( WCHAR ) * ( chars  + 1 ));
-	wbuff = ( WCHAR * ) SvPV_nolen( WCHAR_SV );
 	
-	convert_towchar_01( wbuff , dir_u8, chars);
-	
-	hFile = FindFirstFileW( wbuff, &data);
+	hFile = FindFirstFileW( dir, &data);
 	if ( hFile == INVALID_HANDLE_VALUE ){
 	    croak( "FindFile: No Files found");
 	    NULL;	        
 	}
 	else {
-	    (void)convert_toutf8_02( BIG_UTF8, sizeof( BIG_UTF8 ),data.cFileName); 
-	    mXPUSHp( BIG_UTF8, strlen( BIG_UTF8 ));
+	    XPUSHs( wfd_new( &data ));
 	    while( FindNextFileW( hFile, &data) ){
-		convert_toutf8_02( BIG_UTF8, sizeof( BIG_UTF8 ), data.cFileName); 
-		mXPUSHp( BIG_UTF8, strlen( BIG_UTF8 ));
+		XPUSHs( wfd_new( &data ));
 	    };
 	    FindClose( hFile );
 	}
@@ -562,4 +674,126 @@ Output( SV *sv )
 
 
 
+#MODULE = Win32::FindFile::_                PACKAGE = Win32::FindFile::_
+#
+#
+#
+#void nil(...)
+#OVERLOAD: )
+#    
+#void _y(...)
+#OVERLOAD: \"\"
+#    PPCODE:
+#    mXPUSHp("overload\n", 9);
+#
+#void
+#_x()
+#    INIT:
+#    SV *RETVAL;
+#    PPCODE:
+#    RETVAL = newSV(2);
+#    sv_setref_pv( RETVAL, "Win32::FindFile::_", RETVAL);
+#    XPUSHs(RETVAL);
+
+MODULE = Win32::FindFile                PACKAGE = Win32::FindFile::_WFD PREFIX = wfd_
+
+
+void 
+DESTROY(pWFD *s)
+    PPCODE:
+    Safefree(s);
+
+pWFD * 
+_new(SV*, SV *X)
+PREINIT:
+STRLEN x_len;
+WCHAR *x_ptr;    
+CODE:
+    x_ptr = (WCHAR *) SvPV( X, x_len );
+    x_len /=2;
+#    PerlIO_stdoutf( "length %d\n", x_len );
+    if (x_len >= MAX_PATH )
+	croak("Too big filename");
+
+    Newxz( RETVAL, 1, pWFD );
+    wcsncpy_s( RETVAL->cFileName, MAX_PATH, x_ptr, x_len);
+OUTPUT:
+    RETVAL
     
+
+void
+cFileName(pWFD *ptr, ...)
+    OVERLOAD: \"\"
+    ALIAS:
+     FileName = 1
+     name     = 2
+    PREINIT:
+    STRLEN chars;
+    PPCODE:
+    chars = wcslen( ptr->cFileName );
+    XPUSHs(mortal_utf8( ptr->cFileName, chars ));
+
+void
+dwFileAttributes(pWFD *ptr )
+    PPCODE:
+    mXPUSHi( ptr->dwFileAttributes );
+
+bool
+wfd_is_archive(pWFD *ptr)
+    
+bool
+wfd_is_compressed(pWFD *ptr)
+    
+bool
+wfd_is_device(pWFD *ptr)
+    
+bool
+wfd_is_directory(pWFD *ptr)
+    
+bool
+wfd_is_dir(pWFD *ptr)
+    
+bool
+wfd_is_encrypted(pWFD *ptr)
+    
+bool
+wfd_is_hidden(pWFD *ptr)
+
+bool
+wfd_is_normal(pWFD *ptr)
+    
+bool
+wfd_is_not_indexed(pWFD *ptr)
+    
+bool
+wfd_is_not_content_indexed(pWFD *ptr)
+    
+bool
+wfd_is_offline(pWFD *ptr)
+    
+bool
+wfd_is_readonly(pWFD *ptr)
+
+bool
+wfd_is_reparse_point(pWFD *ptr)
+
+bool
+wfd_is_sparse(pWFD *ptr)
+
+bool
+wfd_is_system(pWFD *ptr)
+
+bool
+wfd_is_temporary(pWFD *ptr)
+
+bool
+wfd_is_entry(pWFD *ptr)
+
+bool
+wfd_is_w(pWFD *ptr)
+
+SV *
+wfd_FileSize(pWFD *ptr)
+    ALIAS:
+	size = 1
+	filesize = 2

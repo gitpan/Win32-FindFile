@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Win32-FindFile
-version:            0.08
+version:            0.09
 abstract:           Perl extension for calling win32 FindFirstFileW/FindNextFileW  ( or FindFirstFile FindNextFile )
 author:
     - A.G. Grishayev <gtoly@cpan.org>
