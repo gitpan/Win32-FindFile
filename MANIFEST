@@ -8,4 +8,5 @@ typemap
 t/01-use.t
 t/02-wchar.t
 lib/Win32/FindFile.pm
+lib/Win32/FindFile/FileData.pm
 META.yml                                 Module meta-data (added by MakeMaker)

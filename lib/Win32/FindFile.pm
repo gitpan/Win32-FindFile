@@ -15,7 +15,8 @@ our @ISA = qw(Exporter);
 # will save memory.
 our %EXPORT_TAGS = ( 'all' => [ qw(
 	FindFile 
-	Output 
+	FileTime
+	FileData
 	wchar 
 	uchar
 	wfchar
@@ -44,10 +45,13 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
-	FindFile 	
+	FindFile FileData FileTime	
 );
+use constant { 
+    FileData => __PACKAGE__ . '::' .'_WFD',
+    FileTime => __PACKAGE__ . '::' .'_WFT',};
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 require XSLoader;
 XSLoader::load('Win32::FindFile', $VERSION);
@@ -60,11 +64,12 @@ __END__
 
 =head1 NAME
 
-Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW  ( or FindFirstFile FindNextFile )
+Win32::FindFile - simple unicode directory reader under Win32
 
 =head1 SYNOPSIS
 
   use Win32::FindFile;
+  use bytes;
   
   my @txt_files = FindFile( "*.txt" );
   my @dir_content = FindFile( "*" );
@@ -72,65 +77,82 @@ Win32::FindFile - Perl extension for calling win32 FindFirstFileW/FindNextFileW 
   # and finally
   # print entire directory content in unicode 
   #
-  binmode( STDOUT, ":utf8" );
   for ( @dir_content ){
-	  utf8::decode( $_ );
-	  print $_, "\n";
+	next unless $file->is_entry # skip over '.', '..'
+	next if $file->is_hidden; # skip over hidden files
+	next if $file->is_system; # etc
+
+	next if $file->ftCreationTime   > time -10; # skip over files created recently
+	next if $file->ftLastWriteTime  > time -10;
+	next if $file->ftLastAccessTime > time -10; 
+
+	next if $file->FileSize == 0; # 
+
+	print $file, "\n"; # $file->cFileName
+	print $file->dosName, "\n";
+
+	my $s = $file->dwFileAttributes; # Get all attribytes
   };
+
   print "Current directory is ", GetCurrentDirectory(), "\n";
-
-# Using with Win32API::File
-
-  use Win32::FindFile qw(wchar GetCurrentDirectory);
-  use Win32API::File qw(MoveFileW);
-  use Win32::API ;
-
-  my %rename ( ... )
-  for (FindFile( '*' )){
-	next unless $rename{$_}:
-	MoveFileW( wchar( $_ ), wchar( $rename{$_} ) or die "$^E";
-
-  }
 
 
 
 =head1 DESCRIPTION
 
-	Win32::FindFile are simple wrapper around win32 functions FindFileFirst/FindFileNext
+	Win32::FindFile are simple tool for reading unicode dir content. It call kernel32.dll unicode functions
+	FindFirstFileW, FindNextFileW, and covert UTF-16 to utf8 and back there is needed.
+
+	Main Function is FindFile that take pattern of form '*' or '$directory\*' or more complex "$directory\*.txt"
+	and return records from FileFileNextW as Class.
+
+	Other function are utility functions as Copy, Move, GetCurrentDirectory, SetCurrentDirectory, ... etc.
 
 =head2 EXPORT
 
+=over 4
 
-@content = FindFile( $Pattern )
+=item @content = FindFile( $Pattern )
+    Find files matching pattern and returns them as list
+    each record is blessed in FileFind::FindData class.
 
+=item  utf8 =  GetCurrentDirectory()
 
-    GetCurrentDirectory()
-    SetCurrentDirectory( folder ) or die "Can't chdir to folder";
-    GetFullPathName(file)
+    return CurrentDirectory as getcwd? but return value in utf8
 
-    wchar
-    uchar
-    wfchar
+=item SetCurrentDirectory( folder ) or die "Can't chdir to folder";
 
-    AreFileApisANSI
-    SetFileApisToOEM
-    SetFileApisToANSI
+    Set current directory
 
-    DeleteFile
-    CopyFile($$;$)
-    MoveFile($$)
-    RemoveDirectory
-    CreateDirectory
+=item GetFullPathName(file)
+    Expand file name to absolute path
 
-    GetBinaryType
-    GetCompressedFileSize
-    GetFileAttributes
-    SetFileAttributes
-    GetLongPathName(file)
+=item  $bool = AreFileApisANSI()
+=item SetFileApisToOEM()
+=item SetFileApisToANSI()
+    If you know that is it you may do it
+=item  DeleteFile( $file )
+    Delete file. On success return true. Error description are at $^E
+=item  CopyFile($from, $to, $fail_if_overwrite)
+=item  MoveFile($from, $to)
+=item  RemoveDirectory( $dir )
+=item  CreateDirectory( $dir )
 
+    copy, move, rmdir, mkdir. On success return 1. Errors at $^E
+
+=item  GetBinaryType($file)
+    See MSDN
+=item  GetCompressedFileSize($file)
+=item  GetFileAttributes($file)
+=item  GetFileAttributes)$file, $attr)
+=item  GetLongPathName(file)
+
+=back
+
+=cut
 =head1 SEE ALSO
 
-L<Win32>, L<Win32API>
+L<Win32>, L<Win32API>, L<Win32::UNICODE>
 
 =head1 AUTHOR
 

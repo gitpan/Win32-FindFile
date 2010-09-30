@@ -45,8 +45,15 @@ Revision history for Perl extension Win32::FindFile.
 	    SetFileApisToOEM
 	    SetFileApisToANSI
 
-0.09  Mon Sep 30 02:40 
+0.09  Thu Sep 30 02:40 
 	- added overloaded struct _WFD
 	with properties
 	    is_hidden and etc
 	    cFileName
+
+0.10  Thu Sep 30 14:41
+	- added DateTime
+	- dosName
+	- LastModified && etc
+
+

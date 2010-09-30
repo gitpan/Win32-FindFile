@@ -1,4 +1,5 @@
 TYPEMAP
+pWFT *	    O_OBJECT
 pWFD *	    O_OBJECT
 WFile	    WINDOWS_FILE
 pobj	    O_OBJECT

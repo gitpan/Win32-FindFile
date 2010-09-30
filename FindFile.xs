@@ -6,6 +6,8 @@
 #include <Windows.h>//#include <Winbase.h>
 
 typedef WCHAR * WFile;
+typedef WIN32_FIND_DATAW pWFD; 
+typedef FILETIME pWFT; 
 typedef DWORD (*GetLongPathName_t)(
 	   WCHAR* ,
 	   WCHAR* ,
@@ -227,18 +229,13 @@ SV * WBool(bool obj){
 }
 
 
-typedef WIN32_FIND_DATAW pWFD; 
 
 
-bool
-wfd_is_w(pWFD *ptr){
-    return 1 && ( ptr->dwFileAttributes & ( FILE_ATTRIBUTE_READONLY && FILE_ATTRIBUTE_SYSTEM ));
-}
 
 SV *
 wfd_FileSize(pWFD *ptr){
     SV *sv;
-    sv= sv_newmortal();
+    sv= newSV(0);
     if (sizeof ( UV ) > sizeof (DWORD)){
 	sv_setuv( sv, (((UV)ptr->nFileSizeHigh) << 32 ) + ptr->nFileSizeLow);
     }
@@ -252,6 +249,47 @@ wfd_FileSize(pWFD *ptr){
     }
     return sv;
 }
+double
+wft_as_time( pWFT * ptr ){
+    double x2;
+    x2 = ptr->dwHighDateTime * ( 4294967296.0) + ptr->dwLowDateTime; 
+    x2 -=116444736000000000.0;
+    x2 /= 100000000.0;
+    return x2;
+};
+
+SV *
+wft_from_wft( pWFT *ptr ){
+    SV * sv;
+    pWFT *nptr;
+    sv = sv_newmortal();
+    Newx( nptr, 1, pWFT);
+    Copy( ptr, nptr, 1, pWFT);
+    sv_setref_pv( sv, "Win32::FindFile::_WFT", (void *) nptr);
+    return sv;
+}
+SV *
+wft_from_time( double s ){
+    FILETIME date;
+    double s1 = floor( s *100000000 +0.5 + 116444736000000000.0)/ 4294967296.0 ;
+    double int1;
+    date.dwLowDateTime = (DWORD)(int)modf(  s1, &int1);
+    date.dwHighDateTime= (DWORD)(int)( int1 *4294967296.5);
+    return wft_from_wft( &date);
+}
+
+
+int 
+wft_cmp( pWFT * s1, pWFT *s2 ){
+    double x1 = wft_as_time( s1);
+    double x2 = wft_as_time( s2);
+    if ( x1 < x2 )
+	return -1;
+    if ( x1 > x2 )
+	return 1;
+    return 0;
+}
+
 
 bool 
 wfd_is_entry(pWFD *ptr){
@@ -262,6 +300,15 @@ wfd_is_entry(pWFD *ptr){
     if ( ptr->cFileName[2] != 0   )
 	return TRUE;
     return FALSE;
+}
+
+bool
+wfd_is_empty(pWFD *ptr){
+    return ! ( ptr->nFileSizeLow || ptr->nFileSizeHigh);
+}
+bool
+wfd_is_ro(pWFD *ptr){
+    return ! ( ptr->dwFileAttributes & ( FILE_ATTRIBUTE_READONLY || FILE_ATTRIBUTE_SYSTEM ));
 }
 
 bool
@@ -282,6 +329,11 @@ wfd_is_device(pWFD *ptr){
 bool
 wfd_is_directory(pWFD *ptr){
     return ptr->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY && 1;
+}
+
+bool
+wfd_is_file(pWFD *ptr){
+    return !(ptr->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 bool
@@ -343,6 +395,23 @@ bool
 wfd_is_temporary(pWFD *ptr){
     return ptr->dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY && 1;
 }
+
+UV wfd_dwFileSizeLow(pWFD *ptr){
+    return ptr->nFileSizeLow;
+}
+UV wfd_dwFileSizeHigh(pWFD *ptr){
+    return ptr->nFileSizeHigh;
+}
+UV wfd_dwFileAttributes(pWFD *ptr){
+    return ptr->dwFileAttributes;
+}
+UV wfd_dwReserved0(pWFD *ptr){
+    return ptr->dwReserved0;
+}
+UV wfd_dwReserved1(pWFD *ptr){
+    return ptr->dwReserved1;
+}
+
 
 SV *wfd_new(WIN32_FIND_DATAW *str){
     SV *RET;
@@ -673,27 +742,53 @@ Output( SV *sv )
 	PerlIO_stdoutf( "%.*s", size, ptr);
 
 
+MODULE = Win32::FindFile                PACKAGE = Win32::FindFile::_WFT PREFIX = wft_
 
-#MODULE = Win32::FindFile::_                PACKAGE = Win32::FindFile::_
-#
-#
-#
-#void nil(...)
-#OVERLOAD: )
-#    
-#void _y(...)
-#OVERLOAD: \"\"
-#    PPCODE:
-#    mXPUSHp("overload\n", 9);
-#
-#void
-#_x()
-#    INIT:
-#    SV *RETVAL;
-#    PPCODE:
-#    RETVAL = newSV(2);
-#    sv_setref_pv( RETVAL, "Win32::FindFile::_", RETVAL);
-#    XPUSHs(RETVAL);
+void DESTROY(pWFT *s)
+    PPCODE:
+    Safefree(s);
+
+double wft_as_time(pWFT *s, ... )
+    OVERLOAD: 0+
+    ALIAS:
+	as_utc=1
+
+int 
+wft_cmp(pWFT *s1, pWFT*s2, ... ) 
+    OVERLOAD: cmp <=> 
+
+UV
+wft_highWord(pWFT *s1)
+    CODE:
+    RETVAL = s1->dwHighDateTime;
+    OUTPUT:
+    RETVAL
+
+UV
+wft_lowWord(pWFT *s1)
+    CODE:
+    RETVAL = s1->dwLowDateTime;
+    OUTPUT:
+    RETVAL
+
+	
+SV *
+new( SV *, double x)
+    CODE:
+    RETVAL = wft_from_time( x );
+    OUTPUT:
+    RETVAL
+
+
+void 
+bytestr(pWFT *s)
+    ALIAS:
+	bytestring   = 1
+	as_bytearray = 2
+    PPCODE:
+    mXPUSHp((U8 *)s, sizeof(*s)*2);
+
+
 
 MODULE = Win32::FindFile                PACKAGE = Win32::FindFile::_WFD PREFIX = wfd_
 
@@ -733,64 +828,65 @@ cFileName(pWFD *ptr, ...)
     chars = wcslen( ptr->cFileName );
     XPUSHs(mortal_utf8( ptr->cFileName, chars ));
 
-void
-dwFileAttributes(pWFD *ptr )
+void dosName(pWFD *ptr)
+    ALIAS:
+        cAlternateFileName=1
     PPCODE:
-    mXPUSHi( ptr->dwFileAttributes );
+    if (ptr->cAlternateFileName[0])
+	XPUSHs(mortal_utf8( ptr->cAlternateFileName, wcslen(ptr->cAlternateFileName)));
+    else
+	XPUSHs(mortal_utf8( ptr->cFileName, wcslen(ptr->cFileName)));
 
-bool
-wfd_is_archive(pWFD *ptr)
-    
-bool
-wfd_is_compressed(pWFD *ptr)
-    
-bool
-wfd_is_device(pWFD *ptr)
-    
-bool
-wfd_is_directory(pWFD *ptr)
-    
-bool
-wfd_is_dir(pWFD *ptr)
-    
-bool
-wfd_is_encrypted(pWFD *ptr)
-    
-bool
-wfd_is_hidden(pWFD *ptr)
 
-bool
-wfd_is_normal(pWFD *ptr)
-    
-bool
-wfd_is_not_indexed(pWFD *ptr)
-    
-bool
-wfd_is_not_content_indexed(pWFD *ptr)
-    
-bool
-wfd_is_offline(pWFD *ptr)
-    
-bool
-wfd_is_readonly(pWFD *ptr)
+UV 
+interface_dw_p(pWFD *ptr)
+    INTERFACE:
+    wfd_dwFileSizeLow
+    wfd_dwFileSizeHigh
+    wfd_dwFileAttributes
+    wfd_dwReserved0
+    wfd_dwReserved1
 
-bool
-wfd_is_reparse_point(pWFD *ptr)
 
-bool
-wfd_is_sparse(pWFD *ptr)
+bool interface_b_p(pWFD *ptr)
+    INTERFACE:
+    wfd_is_temporary
+    wfd_is_entry
+    wfd_is_ro
+    wfd_is_empty
+    wfd_is_archive
+    wfd_is_compressed
+    wfd_is_device
+    wfd_is_directory
+    wfd_is_dir
+    wfd_is_file
+    wfd_is_encrypted
+    wfd_is_hidden
+    wfd_is_normal
+    wfd_is_not_indexed
+    wfd_is_not_content_indexed
+    wfd_is_offline
+    wfd_is_readonly
+    wfd_is_reparse_point
+    wfd_is_sparse
+    wfd_is_system
 
-bool
-wfd_is_system(pWFD *ptr)
 
-bool
-wfd_is_temporary(pWFD *ptr)
+void
+wfd_ftCreationTime(pWFD *ptr)
+    PPCODE:
+    XPUSHs( wft_from_wft(&ptr->ftCreationTime) );
 
-bool
-wfd_is_entry(pWFD *ptr)
+void
+ftLastAccessTime(pWFD *ptr)
+    PPCODE:
+    XPUSHs( wft_from_wft(&ptr->ftLastAccessTime) );
 
-bool
-wfd_is_w(pWFD *ptr)
+void
+ftLastWriteTime(pWFD *ptr)    
+    PPCODE:
+    XPUSHs( wft_from_wft(&ptr->ftLastWriteTime) );
+
 
 SV *
 wfd_FileSize(pWFD *ptr)
