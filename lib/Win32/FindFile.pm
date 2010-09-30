@@ -51,7 +51,7 @@ use constant {
     FileData => __PACKAGE__ . '::' .'_WFD',
     FileTime => __PACKAGE__ . '::' .'_WFT',};
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 require XSLoader;
 XSLoader::load('Win32::FindFile', $VERSION);

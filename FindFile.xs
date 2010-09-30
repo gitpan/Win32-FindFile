@@ -52,7 +52,6 @@ void convert_towchar_01( WCHAR * buf,  U8 *utf8,  STRLEN chars){
     
 };
 bool convert_toutf8_00 ( U8 *utf8, STRLEN bufsize, WCHAR * wstr ){
-    //PerlIO_stdoutf( "==%d\n", (int) bufsize );
     do {
 	U8 *old = utf8;
 	utf8 = uvchr_to_utf8( utf8, *wstr );
@@ -252,9 +251,16 @@ wfd_FileSize(pWFD *ptr){
 double
 wft_as_time( pWFT * ptr ){
     double x2;
+    //SYSTEMTIME s;
+    //   LONGLONG ll = 116444736000000000;
+   //    ptr->dwLowDateTime = (DWORD) ll;
+   //    ptr->dwHighDateTime = (DWORD) (ll >> 32);
+
+   //   FileTimeToSystemTime( ptr, &s );
     x2 = ptr->dwHighDateTime * ( 4294967296.0) + ptr->dwLowDateTime; 
     x2 -=116444736000000000.0;
-    x2 /= 100000000.0;
+    x2 /= 10000000.0;
+    // printf( "%d %d %d %d %d %d = %lf\n", s.wYear, s.wMonth, s.wDay, s.wHour, s.wMinute, s.wSecond, x2);
     return x2;
 };
 
@@ -271,10 +277,10 @@ wft_from_wft( pWFT *ptr ){
 SV *
 wft_from_time( double s ){
     FILETIME date;
-    double s1 = floor( s *100000000 +0.5 + 116444736000000000.0)/ 4294967296.0 ;
+    double s1 = ( s *10000000 +0.5  + 116444736000000000.0 )/ 4294967296.0 ;
     double int1;
-    date.dwLowDateTime = (DWORD)(int)modf(  s1, &int1);
-    date.dwHighDateTime= (DWORD)(int)( int1 *4294967296.5);
+    date.dwLowDateTime = (DWORD)(int)( 0.5 + 4294967296 * modf(  s1, &int1));
+    date.dwHighDateTime= (DWORD)(int)( int1  + .5);
     return wft_from_wft( &date);
 }
 
@@ -443,7 +449,6 @@ uchar2( SV * wstr_sv )
     sv_2mortal( UTF8_SV );
 
     bufsize = chars * 2 + UTF8_MAXBYTES  + 1;
-    //PerlIO_stdoutf( "=*=%d\n", (int) bufsize );
     do {
 	SvGROW( UTF8_SV, bufsize );
 	str_u8 = ( U8 *) SvPVX( UTF8_SV );
@@ -486,7 +491,6 @@ fromWCHAR( SV * wstr_sv )
     sv_2mortal( UTF8_SV );
 
     bufsize = chars * 2 + UTF8_MAXBYTES  + 1;
-    //PerlIO_stdoutf( "=*=%d\n", (int) bufsize );
     do {
 	SvGROW( UTF8_SV, bufsize );
 	str_u8 = ( U8 *) SvPVX( UTF8_SV );
@@ -748,6 +752,11 @@ void DESTROY(pWFT *s)
     PPCODE:
     Safefree(s);
 
+void
+nil()
+    OVERLOAD: )
+    PPCODE:
+
 double wft_as_time(pWFT *s, ... )
     OVERLOAD: 0+
     ALIAS:
@@ -772,13 +781,10 @@ wft_lowWord(pWFT *s1)
     RETVAL
 
 	
-SV *
+void 
 new( SV *, double x)
-    CODE:
-    RETVAL = wft_from_time( x );
-    OUTPUT:
-    RETVAL
-
+    PPCODE:
+    XPUSHs(wft_from_time( x ));
 
 void 
 bytestr(pWFT *s)
@@ -806,7 +812,6 @@ WCHAR *x_ptr;
 CODE:
     x_ptr = (WCHAR *) SvPV( X, x_len );
     x_len /=2;
-#    PerlIO_stdoutf( "length %d\n", x_len );
     if (x_len >= MAX_PATH )
 	croak("Too big filename");
 
