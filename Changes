@@ -61,4 +61,7 @@ Revision history for Perl extension Win32::FindFile.
 	- dosName now return always something valid ( may be TODO is_dosName impl, how about retrieving extention )
 
 
+0.12  Thu Oct 10 17:41
+	- added #include <string.h> && <wchar.h> for mingw && etc
+
 

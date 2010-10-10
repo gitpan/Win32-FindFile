@@ -3,6 +3,8 @@
 #include "XSUB.h"
 
 #include "ppport.h"
+#include <string.h>
+#include <wchar.h>
 #include <Windows.h>//#include <Winbase.h>
 
 typedef WCHAR * WFile;
