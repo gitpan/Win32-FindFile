@@ -1,6 +1,7 @@
 use Config;
 use Data::Dumper;
-unless ( $] >= 5.008001 ){
+use constant {  MIN_PERL_VERSION => 5.008001 };
+unless ( $] >= MIN_PERL_VERSION ){
 	print STDERR "Perl 5.8.1 required would not build\n";
 	exit;
 }
@@ -27,12 +28,14 @@ WriteMakefile(
     NAME              => 'Win32::FindFile',
     VERSION_FROM      => 'lib/Win32/FindFile.pm', # finds $VERSION
     PREREQ_PM         => {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'lib/Win32/FindFile.pm', # retrieve abstract from module
-       AUTHOR         => 'A.G. Grishayev <gtoly@cpan.org>') : ()),
+	ABSTRACT_FROM  => 'lib/Win32/FindFile.pm', # retrieve abstract from module
+	AUTHOR         => 'A.G. Grishayev <gtoly@cpan.org>',
     LIBS              => [], # e.g., '-lm'
     DEFINE            => '', # e.g., '-DHAVE_SOMETHING'
     INC               => '-I.', # e.g., '-I. -I/usr/include/other'
+    $ExtUtils::MakeMaker::VERSION >= 6.48 ?  (MIN_PERL_VERSION => MIN_PERL_VERSION) : (),
+	$ExtUtils::MakeMaker::VERSION >= 6.31 ?  ( LICENSE => 'perl') : (),
+
 	# Un-comment this if you add C files to link with later:
-     OBJECT            => '$(O_FILES)', # link all the C files too
+	# OBJECT            => '$(O_FILES)', # link all the C files too
 );

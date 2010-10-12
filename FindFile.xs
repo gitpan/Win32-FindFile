@@ -18,7 +18,20 @@ typedef DWORD (*GetLongPathName_t)(
 
 void nil(){
     NULL;
-};
+}
+bool
+mywcsncpy_s( WCHAR *strDest, STRLEN buffer, const WCHAR *strSource, STRLEN count ){
+    STRLEN i;
+    STRLEN k;
+    if ( buffer <= count){
+	strDest[0] = 0;
+	return 0;	
+    };
+
+    for( ; count && (*strDest++ = *strSource++); --count);
+    *strDest = 0;    
+    return 1;
+}
 void convert_towchar( WCHAR * buf,  U8 *utf8,  STRLEN chars){
     UV value;
     STRLEN offset;
@@ -818,7 +831,7 @@ CODE:
 	croak("Too big filename");
 
     Newxz( RETVAL, 1, pWFD );
-    wcsncpy_s( RETVAL->cFileName, MAX_PATH, x_ptr, x_len);
+    mywcsncpy_s( RETVAL->cFileName, MAX_PATH, x_ptr, x_len);
 OUTPUT:
     RETVAL
     

@@ -1,16 +1,17 @@
 --- #YAML:1.0
 name:               Win32-FindFile
-version:            0.12
+version:            0.13
 abstract:           simple unicode directory reader under Win32
 author:
     - A.G. Grishayev <gtoly@cpan.org>
-license:            unknown
+license:            perl
 distribution_type:  module
 configure_requires:
     ExtUtils::MakeMaker:  0
 build_requires:
     ExtUtils::MakeMaker:  0
-requires:  {}
+requires:
+    perl:  5.008001
 no_index:
     directory:
         - t
