@@ -16,6 +16,7 @@ typedef DWORD (*GetLongPathName_t)(
 	   DWORD 
 	);
 
+
 void nil(){
     NULL;
 }
@@ -250,16 +251,17 @@ SV *
 wfd_FileSize(pWFD *ptr){
     SV *sv;
     sv= newSV(0);
-    if (sizeof ( UV ) > sizeof (DWORD)){
+    if ( sizeof( UV ) > sizeof(DWORD)){
 	sv_setuv( sv, (((UV)ptr->nFileSizeHigh) << 32 ) + ptr->nFileSizeLow);
     }
-    else {
+    else 
+    {
 	if ( ptr->nFileSizeHigh == 0 ){
 	    sv_setuv( sv, ptr->nFileSizeLow );
 	}
 	else {
 	    sv_setnv( sv, ptr->nFileSizeHigh * (  0x10000 * ((double) 0x10000 ) ));
-	}
+	};
     }
     return sv;
 }
@@ -294,16 +296,33 @@ wft_from_time( double s ){
     FILETIME date;
     double s1 = ( s *10000000 +0.5  + 116444736000000000.0 )/ 4294967296.0 ;
     double int1;
-    date.dwLowDateTime = (DWORD)(int)( 0.5 + 4294967296 * modf(  s1, &int1));
+    date.dwLowDateTime = (DWORD)(int)( 0.5 + 4294967296.0 * modf(  s1, &int1));
     date.dwHighDateTime= (DWORD)(int)( int1  + .5);
     return wft_from_wft( &date);
 }
 
 
+
+double wft_as_double( SV *arg ){
+    double s=0;
+    if (sv_isobject(arg) && SvTYPE( SvRV(arg)) == SVt_PVMG ) {
+	if (! strcmp(HvNAME(SvSTASH(SvRV(arg))), "Win32::FindFile::_WFT")){
+	    s = wft_as_time( (pWFT *) SvIV((SV*)SvRV( arg )));
+	}
+	else {
+	    s = SvNV(arg);
+	}
+    } 
+    else {
+	s=SvNV(arg);
+    };
+    return s;
+}
+
 int 
-wft_cmp( pWFT * s1, pWFT *s2 ){
-    double x1 = wft_as_time( s1);
-    double x2 = wft_as_time( s2);
+wft_cmp( SV * s1, SV *s2 ){
+    double x1 = wft_as_double( s1);
+    double x2 = wft_as_double( s2);
     if ( x1 < x2 )
 	return -1;
     if ( x1 > x2 )
@@ -311,11 +330,12 @@ wft_cmp( pWFT * s1, pWFT *s2 ){
     return 0;
 }
 
-
 bool 
 wfd_is_entry(pWFD *ptr){
     if ( ptr->cFileName[0] != '.' )
 	return TRUE;
+    if ( ptr->cFileName[1] == 0 )
+	return FALSE; 
     if ( ptr->cFileName[1] != '.' )
 	return TRUE;
     if ( ptr->cFileName[2] != 0   )
@@ -772,13 +792,18 @@ nil()
     OVERLOAD: )
     PPCODE:
 
+double
+wft_as_double(SV * time)
+
+
+
 double wft_as_time(pWFT *s, ... )
     OVERLOAD: 0+
     ALIAS:
 	as_utc=1
 
 int 
-wft_cmp(pWFT *s1, pWFT*s2, ... ) 
+wft_cmp(SV *s1, SV*s2, ... ) 
     OVERLOAD: cmp <=> 
 
 UV
@@ -848,6 +873,35 @@ cFileName(pWFD *ptr, ...)
     chars = wcslen( ptr->cFileName );
     XPUSHs(mortal_utf8( ptr->cFileName, chars ));
 
+void
+relName(pWFD *ptr, SV *directory = 0, char *delim = "/" )
+    PREINIT:
+    STRLEN chars;
+    SV *prefix;
+    SV *itemname;
+    STRLEN prefix_len;
+    char* prefix_str;
+    PPCODE:
+    if (directory){
+	prefix = sv_mortalcopy( directory );
+    }
+    else {
+	prefix = newSVpvn("",0);
+    };
+    prefix_str = SvPV( prefix, prefix_len );
+    while( prefix_len !=0 && ( prefix_str[prefix_len-1] == '/' || prefix_str[prefix_len -1] == '\\' )){
+	prefix_str[prefix_len-1] = 0;
+	SvCUR_set(prefix,prefix_len-1 );
+	--prefix_len;
+    };
+    if (prefix_len)
+	sv_catpvn( prefix, delim, 1 );    
+    chars = wcslen( ptr->cFileName );
+    itemname = mortal_utf8( ptr->cFileName, chars );
+    sv_catsv( prefix, itemname );
+    XPUSHs( prefix );
+
+
 void dosName(pWFD *ptr)
     ALIAS:
         cAlternateFileName=1
@@ -899,11 +953,15 @@ wfd_ftCreationTime(pWFD *ptr)
 
 void
 ftLastAccessTime(pWFD *ptr)
+    ALIAS:
+	atime=1
     PPCODE:
     XPUSHs( wft_from_wft(&ptr->ftLastAccessTime) );
 
 void
 ftLastWriteTime(pWFD *ptr)    
+    ALIAS:
+	mtime=1
     PPCODE:
     XPUSHs( wft_from_wft(&ptr->ftLastWriteTime) );
 

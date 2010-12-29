@@ -19,8 +19,10 @@ use strict;
 	next if $file->is_directory;
 
 	next if $file->ftCreationTime   > time -10; # skip over files created recently
-	next if $file->ftLastWriteTime  > time -10;
-	next if $file->ftLastAccessTime > time -10; 
+	next if $file->ftLastWriteTime  > time -10; # or $file->mtime
+	next if $file->ftLastAccessTime > time -10; # or $file->atime
+
+	my $mtime = $file->mtime->as_double + 1;
 
 	next if $file->FileSize == 0; # 
 
@@ -35,13 +37,14 @@ use strict;
 
 =over 4
 
+=item $relName = $fd->relName( $dirname, $path_delimiter )
+
 =item $bool = $fd->is_temporary
 
     This is a convinience function what test what dwFileAttributes has FILE_FILE_ATTRIBUTE_TEMPORARY bit set.
 =item $bool = $fd->is_entry
 
     boolean function that is false for filename equal '.' and '..', otherwise return true.
-
 
 =item $bool = $fd->is_ro
 
@@ -68,9 +71,10 @@ use strict;
 =item $bool = is_sparse
 =item $bool = is_system
 
-    All these properties name by its corresponding attribute
 
 =back
+
+    All these properties name by its corresponding attribute
 
 =head1 PROPERTIES
 

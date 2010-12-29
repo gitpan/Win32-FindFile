@@ -15,6 +15,7 @@ our @ISA = qw(Exporter);
 # will save memory.
 our %EXPORT_TAGS = ( 'all' => [ qw(
 	FindFile 
+	ReadDir
 	FileTime
 	FileData
 	wchar 
@@ -38,8 +39,8 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 	GetLongPathName
 
 	AreFileApisANSI
-        SetFileApisToOEM
-        SetFileApisToANSI
+	SetFileApisToOEM
+	SetFileApisToANSI
 	) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -51,10 +52,24 @@ use constant {
     FileData => __PACKAGE__ . '::' .'_WFD',
     FileTime => __PACKAGE__ . '::' .'_WFT',};
 
-our $VERSION = '0.13';
 
-require XSLoader;
-XSLoader::load('Win32::FindFile', $VERSION);
+BEGIN{
+	our $VERSION = '0.14';
+	require XSLoader;
+	XSLoader::load('Win32::FindFile', $VERSION);
+};
+use autouse Carp => qw(carp croak);
+sub ReadDir{
+	croak( 'Usage Win32::FindFile::ReadDir( $dir )' ) unless 1 == @_ && defined $_[0];
+	my $folder = $_[0];
+	croak( 'Usage Win32::FindFile::ReadDir( $dir ) - $dir contains * ?' )
+		if $folder=~m/[\*\?]/;
+	$folder=~s/\/+\z//g;
+	@_ = ();
+	@_ = $folder;
+	$_[0].="\\*";
+	goto &FindFile;
+}
 
 # Preloaded methods go here.
 
@@ -72,7 +87,7 @@ Win32::FindFile - simple unicode directory reader under Win32
   use bytes;
   
   my @txt_files = FindFile( "*.txt" );
-  my @dir_content = FindFile( "*" );
+  my @dir_content = ReadDir( "." );
 
   # and finally
   # print entire directory content in unicode 
@@ -87,6 +102,9 @@ Win32::FindFile - simple unicode directory reader under Win32
 	next if $file->ftLastAccessTime > time -10; 
 
 	next if $file->FileSize == 0; # 
+
+	print $file->relName( "$dirname" ), "\n" ; # same as "dirname/$file" (Unix style)
+	print $file->relName( "$dirname", "\\" ), "\n" ; # same as "dirname\\$file" (Win style)
 
 	print $file, "\n"; # $file->cFileName
 	print $file->dosName, "\n";
@@ -110,42 +128,56 @@ Win32::FindFile - simple unicode directory reader under Win32
 
 =head2 EXPORT
 
-=over 4
+=head3 C<FindFile>
 
-=item @content = FindFile( $Pattern )
-    Find files matching pattern and returns them as list
-    each record is blessed in FileFind::FindData class.
+	FindFile( $GlobPattern ); 
 
-=item  utf8 =  GetCurrentDirectory()
+	@file_matches = FindFile( "$Dir\*" ) or "warn not files match";
+	@file_matches = FindFile( "*" ) ; # list current directory;
+	@file_matches = FindFile( "A*") ; # list files beginning with A letter
 
-    return CurrentDirectory as getcwd? but return value in utf8
+=head3 C<GetCurrentDirectory>
 
-=item SetCurrentDirectory( folder ) or die "Can't chdir to folder";
+	$curpwd = CurrentDirectory();
 
-    Set current directory
+=head3 C<SetCurrentDirectory>
 
-=item GetFullPathName(file)
+	SetCurrentDirectory( $next_curpwd ); # set current directory
+
+=head3 C<GetFullPathName>
+
+	$absolute_path = GetFullPathName( $filename ) 
+
     Expand file name to absolute path
 
-=item  $bool = AreFileApisANSI()
-=item SetFileApisToOEM()
-=item SetFileApisToANSI()
-    If you know that is it you may do it
+=over 4
+EXPORT
+
 =item  DeleteFile( $file )
-    Delete file. On success return true. Error description are at $^E
+
 =item  CopyFile($from, $to, $fail_if_overwrite)
+
 =item  MoveFile($from, $to)
+
 =item  RemoveDirectory( $dir )
+
 =item  CreateDirectory( $dir )
 
-    copy, move, rmdir, mkdir. On success return 1. Errors at $^E
+=item  GetBinaryType( $file )
 
-=item  GetBinaryType($file)
-    See MSDN
 =item  GetCompressedFileSize($file)
+
 =item  GetFileAttributes($file)
-=item  GetFileAttributes)$file, $attr)
-=item  GetLongPathName(file)
+
+=item  GetFileAttributes( $file, $attr )
+
+=item  GetLongPathName( $file )
+
+=item AreFileApisANSI
+
+=item SetFileApisToOEM
+
+=item SetFileApisToANSI
 
 =back
 
@@ -156,7 +188,7 @@ L<Win32>, L<Win32API>, L<Win32::UNICODE>
 
 =head1 AUTHOR
 
-A. G. Grishaev, E<lt>grian@cpan.org<gt>
+A. G. Grishaev, E<lt>grian@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 

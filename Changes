@@ -68,5 +68,13 @@ Revision history for Perl extension Win32::FindFile.
 	- Makefile.PL 
 	- LICENCE 
 	- replacement for wcsncpy_s 
+0.14  Mon Dec 27 9:00
+	- Fix bug in is_entry
+	- pod rewrite for better readability
+	- Added ReadDir function
+	- Added relName for items properties of data
+	- Added as_double for diritem
+	- Added tests for times (<=> cmp) 
+    
 
 
