@@ -6,7 +6,7 @@ unless ( $] >= MIN_PERL_VERSION ){
 	exit;
 }
 
-unless ( $ENV{FORCE} || $^O=~m/MSWin32/i) {
+unless ( $ENV{FORCE} || $^O=~m/MSWin32/i || $^O=~/Cygwin/i ) {
 	print STDERR "Win32 required. Would not build\n";
 	exit;
 };

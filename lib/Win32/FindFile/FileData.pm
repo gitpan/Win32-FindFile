@@ -2,9 +2,10 @@ package Win32::FileFind::FileData;
 use strict;
 
 =pod
+
 =head1 NAME
 
-    Win32::FileFind::FileData - DataRecord returned by FindFile
+Win32::FileFind::FileData - A info about file
 
 =head1 DESCRIPTION
 
@@ -42,6 +43,7 @@ use strict;
 =item $bool = $fd->is_temporary
 
     This is a convinience function what test what dwFileAttributes has FILE_FILE_ATTRIBUTE_TEMPORARY bit set.
+
 =item $bool = $fd->is_entry
 
     boolean function that is false for filename equal '.' and '..', otherwise return true.
@@ -53,7 +55,6 @@ use strict;
 =item $bool = $fd->is_archive
 
     file has archive bit set
-
 
 =item $bool = is_compressed
 =item $bool = is_device
@@ -80,11 +81,11 @@ use strict;
 
 =over 4
 
-=item1 $dword = $fd->dwFileAttributes
+=item $dword = $fd->dwFileAttributes
 
     return all FileAttributes in one unsinged integer
 
-=item $name   = $fd->cFileName or FileName or name
+=item $name   = $fd->cFileName or fileName or name
 
     return utf8 name of file ( not set utf8 flag MAY CHANGE)
 

@@ -307,7 +307,7 @@ double wft_as_double( SV *arg ){
     double s=0;
     if (sv_isobject(arg) && SvTYPE( SvRV(arg)) == SVt_PVMG ) {
 	if (! strcmp(HvNAME(SvSTASH(SvRV(arg))), "Win32::FindFile::_WFT")){
-	    s = wft_as_time( (pWFT *) SvIV((SV*)SvRV( arg )));
+	    s = wft_as_time( INT2PTR(pWFT *, SvIV((SV*)SvRV( arg ))));
 	}
 	else {
 	    s = SvNV(arg);
@@ -586,7 +586,6 @@ FindFile(WFile dir)
 	
 	hFile = FindFirstFileW( dir, &data);
 	if ( hFile == INVALID_HANDLE_VALUE ){
-	    croak( "FindFile: No Files found");
 	    NULL;	        
 	}
 	else {
@@ -866,7 +865,8 @@ cFileName(pWFD *ptr, ...)
     OVERLOAD: \"\"
     ALIAS:
      FileName = 1
-     name     = 2
+     fileName = 2
+     name     = 3
     PREINIT:
     STRLEN chars;
     PPCODE:
@@ -874,28 +874,55 @@ cFileName(pWFD *ptr, ...)
     XPUSHs(mortal_utf8( ptr->cFileName, chars ));
 
 void
-relName(pWFD *ptr, SV *directory = 0, char *delim = "/" )
+relName(pWFD *ptr, SV *directory = 0,  SV *delim = 0 )
+    ALIAS:
+	rel_name=1
     PREINIT:
     STRLEN chars;
     SV *prefix;
     SV *itemname;
     STRLEN prefix_len;
     char* prefix_str;
+    int nopref;
     PPCODE:
     if (directory){
 	prefix = sv_mortalcopy( directory );
     }
     else {
 	prefix = newSVpvn("",0);
+	sv_2mortal(prefix);
     };
     prefix_str = SvPV( prefix, prefix_len );
-    while( prefix_len !=0 && ( prefix_str[prefix_len-1] == '/' || prefix_str[prefix_len -1] == '\\' )){
-	prefix_str[prefix_len-1] = 0;
-	SvCUR_set(prefix,prefix_len-1 );
-	--prefix_len;
-    };
-    if (prefix_len)
-	sv_catpvn( prefix, delim, 1 );    
+    
+    if ( prefix_len !=0 ){
+        nopref = 0;
+	while(  prefix_str[prefix_len-1] == '/' || prefix_str[prefix_len -1] == '\\' ){
+	    --prefix_len;
+	    if ( !prefix_len ){
+                nopref = 1;
+	        prefix_len = 1;
+		break;
+	    }
+	    else if ( prefix_str[prefix_len-1] == ':' ) {
+                nopref = 1;
+		prefix_len++;
+		break;
+	    }
+	    if ( !prefix_len ){
+		break;	
+	    }
+	}
+
+	prefix_str[prefix_len] = 0;
+	SvCUR_set(prefix,prefix_len);
+        if ( ! nopref ){
+	    if (delim)
+		sv_catsv( prefix, delim );    
+	    else {
+		sv_catpvn( prefix, "/", 1 );    
+	    }
+	}
+    }
     chars = wcslen( ptr->cFileName );
     itemname = mortal_utf8( ptr->cFileName, chars );
     sv_catsv( prefix, itemname );

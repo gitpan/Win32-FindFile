@@ -54,7 +54,7 @@ use constant {
 
 
 BEGIN{
-	our $VERSION = '0.14';
+	our $VERSION = '0.15';
 	require XSLoader;
 	XSLoader::load('Win32::FindFile', $VERSION);
 };
@@ -182,9 +182,10 @@ EXPORT
 =back
 
 =cut
+
 =head1 SEE ALSO
 
-L<Win32>, L<Win32API>, L<Win32::UNICODE>
+L<Win32>, L<Win32API>, L<Win32::UNICODE>, L<Win32::LongPath>
 
 =head1 AUTHOR
 
@@ -192,7 +193,7 @@ A. G. Grishaev, E<lt>grian@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by A. G. Grishaev
+Copyright (C) 2014 by A. G. Grishaev
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.1 or,

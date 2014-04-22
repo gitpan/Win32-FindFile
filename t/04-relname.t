@@ -1,4 +1,3 @@
-
 use Test::More 'no_plan' => () ;
 use lib 'lib';
 use Data::Dumper;
@@ -29,12 +28,16 @@ ok( @r3 == 1, "t/01-use.t present" );
 my $use = $r3[0] or return;
 is( $use->name, '01-use.t', "name ok 1");
 is( $use->FileName, '01-use.t', "name ok 2");
+is( $use->fileName, '01-use.t', "name ok 2");
 is( $use->cFileName, '01-use.t', "name ok 3");
 is( $use->relName(), '01-use.t', "relname()");
 is( $use->relName(""), '01-use.t', "relname('')");
 is( $use->relName("abc"), 'abc/01-use.t', "relname 1 (abc)");
 is( $use->relName("abc\\"), 'abc/01-use.t', "relname 2 (abc)");
 is( $use->relName("abc\/"), 'abc/01-use.t', "relname 3 (abc)");
+is( $use->relName("/"),  '/01-use.t', "relname 4 (/)");
+is( $use->relName("\\"), "\\01-use.t", "relname 5 (\\)");
+is( $use->relName("C:\\"), 'C:\\01-use.t', "relname 6 (C:\\)");
 
 
 is( $use->relName("", "\\"), '01-use.t', "relname('')");

@@ -76,5 +76,10 @@ Revision history for Perl extension Win32::FindFile.
 	- Added as_double for diritem
 	- Added tests for times (<=> cmp) 
     
-
-
+0.15  Tue Apr 23 1:00
+  	- FindFile no croak
+	- ported to cygwin
+	- no compile warnings
+        - Fixed pod errors
+	- Fixed camel case of (FileName - fileName)
+	- better relName
